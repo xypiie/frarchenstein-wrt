@@ -1,0 +1,6 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# OpenWrt entrypoint; the existing Arch coreutils `arch` is unaffected.
+exec /usr/libexec/frarchenstein/arch-run /usr/bin/env \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/bin TERM="${TERM:-linux}" \
+    /bin/bash --login "$@"

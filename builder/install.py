@@ -24,7 +24,7 @@ EXPORT = Path('/exports')
 ARCH = Path('/work/arch')
 OW = Path('/work/openwrt')
 DATA = Path('/work/data')
-PROTECTED = ['sbin/mount_root', 'sbin/kmodloader', 'sbin/init', 'sbin/procd',
+PROTECTED = ['usr/bin/arch', 'sbin/mount_root', 'sbin/kmodloader', 'sbin/init', 'sbin/procd',
              'sbin/upgraded', 'sbin/factoryreset', 'sbin/sysupgrade', 'sbin/firstboot',
              'lib/preinit/80_mount_root', 'lib/preinit/79_move_config',
              'etc/init.d/umount', 'usr/libexec/validate_firmware_image',
@@ -112,9 +112,9 @@ def package_arch():
     folder = Path('/work/arch-package')
     folder.mkdir()
     shutil.copyfile(PROJECT / 'recipes/arch/PKGBUILD', folder / 'PKGBUILD')
-    names = ['runtime.py', 'module_bridge.py', 'shutdown-arch', 'publish_boot.py', 'guard-update', 'update.py', 'generations.py', 'apps.py', 'reviewed-kernels.json']
+    names = ['runtime.py', 'module_bridge.py', 'shutdown-arch', 'publish_boot.py', 'guard-update', 'update.py', 'generations.py', 'apps.py', 'kernel_reviews.py', 'pacman', 'kernel-reviews.json', 'reviewed-kernels.json']
     for name in names:
-        shutil.copyfile((PROJECT / 'configs' if name=='reviewed-kernels.json' else SOURCE) / name, folder / name)
+        shutil.copyfile((PROJECT / 'configs' if name in ('reviewed-kernels.json', 'kernel-reviews.json') else SOURCE) / name, folder / name)
     for name in ['install', 'hook', 'config', 'preset']:
         shutil.copyfile(PROJECT / 'recipes/arch/mkinitcpio' / name, folder / ('mkinitcpio-' + name))
     names += ['mkinitcpio-' + n for n in ['install', 'hook', 'config', 'preset']]
@@ -201,10 +201,11 @@ def openwrt():
     (integration / 'etc/rc.d').mkdir(exist_ok=True)
     (integration / 'etc/rc.d/S99frarchenstein-apps').symlink_to('../init.d/frarchenstein-apps')
     (integration / 'etc/rc.d/K01frarchenstein-apps').symlink_to('../init.d/frarchenstein-apps')
+    put(integration / 'usr/bin/arch', (SOURCE / 'arch').read_text(), 0o755)
     dependencies = 'ubox=2025.10.30~6f78fa49-r1001 fstools=2026.05.23~16718b6e-r1001 procd=2026.03.13~58eb263d-r1003 procd-ujail=2026.03.13~58eb263d-r1003 procd-seccomp=2026.03.13~58eb263d-r1003 base-files=1718.1004~981c978eff !kernel !kmod-button-hotplug'
     shutil.copytree(ARTIFACT / 'keys', integration / 'etc/apk/keys')
     put(integration / 'etc/uci-defaults/99-frarchenstein-network', (PROJECT / 'configs/network-defaults.sh').read_text(),0o755)
-    core = mkapk('frarchenstein-wrt', '1.0-r7', integration, dependencies)
+    core = mkapk('frarchenstein-wrt', '1.0-r8', integration, dependencies)
     capabilities = Path('/work/capability-files')
     capabilities.mkdir()
     provides, modules = [], set()
@@ -222,7 +223,7 @@ def openwrt():
                             modules.add(line.split()[0])
             if path.endswith('.ko'):
                 modules.add(Path(path).name[:-3])
-    module_package = mkapk('frarchenstein-arch-kmods', '1.0-r7', capabilities, 'frarchenstein-wrt=1.0-r7', ' '.join(provides))
+    module_package = mkapk('frarchenstein-arch-kmods', '1.0-r8', capabilities, 'frarchenstein-wrt=1.0-r8', ' '.join(provides))
     for path in (ARTIFACT / 'keys').iterdir():
         shutil.copyfile(path, OW / 'etc/apk/keys' / path.name)
     local = OW / 'tmp/hybrid-packages'

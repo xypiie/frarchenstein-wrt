@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: GPL-2.0-only
 pkgname=frarchenstein-wrt-arch
 pkgver=1.0
-pkgrel=13
+pkgrel=15
 pkgdesc='Arch kernel and maintenance integration for the frarchenstein hybrid prototype'
 arch=('x86_64')
 license=('GPL-2.0-only')
-depends=('python' 'kmod' 'mkinitcpio' 'util-linux' 'e2fsprogs' 'bash' 'squashfs-tools')
-backup=('etc/mkinitcpio-frarchenstein.conf' 'etc/mkinitcpio.d/frarchenstein.preset')
-source=('runtime.py' 'module_bridge.py' 'shutdown-arch' 'publish_boot.py' 'guard-update' 'update.py' 'generations.py' 'apps.py' 'reviewed-kernels.json'
+depends=('python' 'kmod' 'mkinitcpio' 'util-linux' 'e2fsprogs' 'bash' 'squashfs-tools' 'libarchive')
+backup=('etc/mkinitcpio-frarchenstein.conf' 'etc/mkinitcpio.d/frarchenstein.preset' 'etc/frarchenstein/kernel-reviews.json')
+source=('runtime.py' 'module_bridge.py' 'shutdown-arch' 'publish_boot.py' 'guard-update' 'update.py' 'generations.py' 'apps.py' 'kernel_reviews.py' 'pacman' 'kernel-reviews.json' 'reviewed-kernels.json'
         'mkinitcpio-install' 'mkinitcpio-hook' 'mkinitcpio-config' 'mkinitcpio-preset')
 sha256sums=('GENERATE_FROM_VERIFIED_SOURCE_IN_GUEST')
 # Local source hashes are substituted by the guest worker before makepkg.
 package() {
     install -d "$pkgdir/usr/lib/frarchenstein" "$pkgdir/usr/share/libalpm/hooks" "$pkgdir/etc/pacman.d/hooks"
-    for name in runtime.py module_bridge.py shutdown-arch publish_boot.py guard-update update.py generations.py apps.py; do
+    for name in runtime.py module_bridge.py shutdown-arch publish_boot.py guard-update update.py generations.py apps.py kernel_reviews.py; do
         install -m755 "$srcdir/$name" "$pkgdir/usr/lib/frarchenstein/$name"
     done
     install -Dm755 "$srcdir/mkinitcpio-install" "$pkgdir/usr/lib/initcpio/install/frarchenstein"
@@ -22,7 +22,8 @@ package() {
     install -Dm644 "$srcdir/mkinitcpio-preset" "$pkgdir/etc/mkinitcpio.d/frarchenstein.preset"
     install -Dm644 "$srcdir/reviewed-kernels.json" "$pkgdir/usr/share/frarchenstein/reviewed-kernels.json"
     install -d "$pkgdir/usr/bin"
-    ln -s ../lib/frarchenstein/update.py "$pkgdir/usr/bin/router-arch-update"
+    install -Dm755 "$srcdir/pacman" "$pkgdir/usr/local/bin/pacman"
+    install -Dm644 "$srcdir/kernel-reviews.json" "$pkgdir/etc/frarchenstein/kernel-reviews.json"
     ln -s ../lib/frarchenstein/generations.py "$pkgdir/usr/bin/router-openwrt-update"
     # Supported pacman hook overrides prevent stock presets publishing to /boot.
     ln -s /dev/null "$pkgdir/etc/pacman.d/hooks/60-mkinitcpio-remove.hook"
@@ -61,7 +62,7 @@ from pathlib import Path
 root=Path(sys.argv[1]); records={}
 for path in sorted(root.rglob('*')):
     name=str(path.relative_to(root))
-    if name == 'etc/mkinitcpio-frarchenstein.conf':
+    if name in ('etc/mkinitcpio-frarchenstein.conf', 'etc/frarchenstein/kernel-reviews.json'):
         continue
     if path.is_symlink(): records[name]={'link':os.readlink(path)}
     elif path.is_file(): records[name]={'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}

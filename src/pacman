@@ -1,0 +1,4 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# The package-owned /usr/bin/pacman remains untouched.
+exec /usr/bin/python3 /usr/lib/frarchenstein/update.py pacman "$@"

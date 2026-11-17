@@ -122,6 +122,32 @@ driver/firmware coverage and physical port roles separately. The default mapping
 belongs to the QEMU lab. Wi-Fi and physical-router acceptance are separate
 gates.
 
+### Maintain the Arch side
+
+From the OpenWrt root console, run `arch` to open the maintenance Bash shell.
+Inside it, use `pacman -Syu` for a full upgrade and `pacman -S PACKAGE` for
+package installation. The integration checks the candidate kernel before any
+installed package changes, preserves running modules and regenerates boot files.
+An unreviewed kernel refuses the whole transaction.
+
+[Maintenance and kernel reviews](docs/maintenance.md) describes status/repair
+commands and optional HTTPS review downloads. The download endpoint is
+not yet configured; bundled reviews remain usable when GitHub is unavailable.
+
+### Validate a new Arch kernel
+
+```sh
+./review-kernel.sh
+```
+
+The runner builds a fresh disposable installation, validates the candidate
+kernel through upgrade, boot, networking, failure repair and OpenWrt generation
+rollback, then updates `configs/reviewed-kernels.json` locally on success.
+An optional `--reuse-build .work/jobs/JOB_ID` reuses a matching compiled core
+cache. [Kernel validation](docs/kernel-validation.md) documents the checks and
+options. Commit and push the review file when you are ready; no signing or
+GitHub repository name is needed to run validation.
+
 ### Source and publication
 
 Everything generated lives under ignored `.work/`; never publish that directory.

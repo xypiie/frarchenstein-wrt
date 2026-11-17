@@ -32,7 +32,7 @@ class QMP:
   return any(e.get('event')=='SHUTDOWN' and e.get('data',{}).get('reason')=='guest-shutdown' for e in self.events)
  def close(self):self.socket.close()
 
-def main():
+def main(guest_check=None, after_smoke=None):
  ap=argparse.ArgumentParser(description=__doc__);g=ap.add_mutually_exclusive_group(required=True)
  g.add_argument('--device',type=Path);g.add_argument('--image',type=Path)
  ap.add_argument('--manifest',type=Path,required=True);ap.add_argument('--work-dir',type=Path,default=ROOT/'.work');ap.add_argument('--tcg',action='store_true')
@@ -100,6 +100,7 @@ def main():
     ready="import json,time\nfor i in range(90):\n if json.load(open('/proc/1/root/overlay/initialization.json'))['state']=='complete': break\n time.sleep(1)\nelse: raise RuntimeError('initialization incomplete')"
     console.command('/usr/libexec/frarchenstein/arch-run /usr/bin/python3 -c '+shlex.quote(ready),timeout=100)
 
+    if guest_check:guest_check(console,state)
     console.command("test $(cat /proc/1/comm) = procd && uname -r && ubus call system board && mount | grep ' /overlay ' && fw4 check",timeout=120)
     result=console.command("if test -f /etc/fwr-test; then test $(cat /etc/fwr-test) = fwr-persistence && printf '%s%s\\n' FWR_PERSISTENCE _PASS; else echo fwr-persistence > /etc/fwr-test; fi; sync")
     state['persistence_verified']=b'FWR_PERSISTENCE_PASS' in result
@@ -147,6 +148,7 @@ def main():
     console.command("sha256sum /lib/apk/db/installed /etc/apk/world > /tmp/fwr-apk-before; if apk add 'ubox=2025.10.30~6f78fa49-r1'; then false; else sha256sum -c /tmp/fwr-apk-before; fi",timeout=120)
     state['stock_owner_refused_before_mutation']=True
     console.command("test $(cat /etc/fwr-test) = fwr-persistence; sync")
+    if after_smoke:after_smoke(console,state)
     console.send('sync; poweroff');console.finish()
    else:router.wait()
    if router.returncode!=0 or not qmp.clean():raise RuntimeError('clean guest poweroff was not observed; inspect/recover offline before retry')
@@ -176,6 +178,8 @@ def main():
    if client and client.poll() is None:client.terminate();client.wait(timeout=30)
    if client_log:client_log.close()
    os.close(ro);(run/'report.json').write_text(json.dumps(state,indent=2)+'\n')
+ return state,run
+
 if __name__=='__main__':
  try:main()
  except (OSError,ValueError,RuntimeError,subprocess.SubprocessError,KeyboardInterrupt) as e:print('start:',e,file=sys.stderr);sys.exit(1)

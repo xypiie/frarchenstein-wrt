@@ -10,6 +10,8 @@ import argparse
 import fcntl
 import json
 import os
+import re
+import urllib.parse
 from pathlib import Path
 import shutil
 import subprocess
@@ -22,6 +24,8 @@ STATE = Path('/boot/frarchenstein/update.json')
 RUN = Path('/run/frarchenstein')
 ROOT = Path('/proc/1/root')
 LIB = Path('/usr/lib/frarchenstein')
+PACMAN = '/usr/bin/pacman'
+REVIEW = RUN / 'transaction-kernel.json'
 
 
 def call(*args, **kwargs):
@@ -146,6 +150,8 @@ def preserve_running():
 
 
 def authorized_hook():
+    if not (RUN / 'update-owner.json').exists():
+        raise ValueError('use pacman from the arch shell; no live authorized transaction')
     auth = read_json(RUN / 'update-owner.json')
     owner = auth['pid']
     # Only a child of the live lock-owning updater may authorize pacman. An
@@ -154,7 +160,7 @@ def authorized_hook():
     while pid > 1 and pid != owner:
         pid = int(Path('/proc', str(pid), 'stat').read_text().split(') ', 1)[1].split()[1])
     if pid != owner or Path('/proc', str(owner), 'stat').read_text().split(') ', 1)[1].split()[19] != auth['starttime']:
-        raise ValueError('use router-arch-update; no live authorized transaction')
+        raise ValueError('use pacman from the maintenance shell; no live authorized transaction')
     lock = (RUN / 'update.lock').open('a')
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -168,8 +174,30 @@ def authorized_hook():
 def hook_pre():
     authorized_hook()
     check_environment()
+    auth = read_json(RUN / 'update-owner.json')
+    targets = sys.stdin.read().splitlines()
+    args = auth.get('pacman_args')
+    if args is None:
+        raise ValueError('transaction lacks its pacman request')
+    operation, _, _ = pacman_request(args)
+    if operation == 'R' and set(targets) & {
+            'linux', 'frarchenstein-wrt-arch', 'python', 'kmod', 'mkinitcpio',
+            'util-linux', 'e2fsprogs', 'bash', 'squashfs-tools', 'gnupg',
+            'pacman', 'libarchive'}:
+        raise ValueError('removing the maintenance/boot integration is unsupported')
+    if 'linux' in targets:
+        review_transaction_kernel(args)
+    if operation == 'S' and not full_upgrade(args):
+        pending = subprocess.run([PACMAN, '-Quq'], capture_output=True, text=True)
+        if pending.returncode not in (0, 1):
+            raise ValueError('cannot check pending system upgrades')
+        if pending.stdout.strip():
+            raise ValueError('pending system upgrades: use pacman -Syu with your package targets to avoid a partial upgrade')
+    # All refusal checks precede application shutdown and installed-file changes.
+    journal('transaction', targets=targets)
+    from apps import quiesce
+    quiesce()
     preserve_running()
-    journal('transaction', targets=sys.stdin.read().splitlines())
 
 
 def hook_post():
@@ -183,17 +211,22 @@ def hook_post():
 
 
 def candidate_policy():
-    files = output('pacman', '-Qlq', 'linux').splitlines()
+    files = output(PACMAN, '-Qlq', 'linux').splitlines()
     kernels = [Path(p) for p in files if p.startswith('/usr/lib/modules/') and p.endswith('/vmlinuz')]
     if len(kernels) != 1:
         raise ValueError('expected one package-owned linux kernel')
     kernel = kernels[0]
     release = kernel.parent.name
-    reviewed = read_json('/usr/share/frarchenstein/reviewed-kernels.json')
+    from kernel_reviews import load_reviews
+    reviewed = load_reviews()
     evidence = reviewed.get(release)
+    if REVIEW.exists():
+        transaction = read_json(REVIEW)
+        if transaction['release'] == release:
+            evidence = transaction['evidence']
     if not evidence or sha(kernel) != evidence['vmlinuz_sha256']:
         raise ValueError('kernel requires source/config/module review before publication: ' + release)
-    if output('pacman', '-Q', 'linux').split()[1] != evidence['package_version']:
+    if output(PACMAN, '-Q', 'linux').split()[1] != evidence['package_version']:
         raise ValueError('kernel package version differs from review')
     call('depmod', release)
     for name in evidence['startup_modules']:
@@ -224,69 +257,207 @@ def prepare():
             active_boot=os.readlink('/boot/arch/current'), error=None)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['update', 'repair', 'status', 'pre', 'post'])
-    parser.add_argument('--reinstall', action='append', default=[], choices=['linux', 'mkinitcpio', 'linux-firmware'])
-    parser.add_argument('--integration-package', type=Path)
-    parser.add_argument('--install', action='append', default=[], help='Install a package declared by an application contract in the full transaction')
-    args = parser.parse_args()
-    if args.action in ['pre', 'post']:
-        (hook_pre if args.action == 'pre' else hook_post)()
-        return
-    if args.action == 'status':
-        print(json.dumps(read_json(STATE) if STATE.exists() else {'state': 'initial'}, indent=2))
-        return
+def pacman_request(args):
+    """Classify supported native syntax without rewriting package targets."""
+    operations = {'--sync': 'S', '--upgrade': 'U', '--remove': 'R',
+                  '--query': 'Q', '--files': 'F', '--deptest': 'T',
+                  '--version': 'V', '--help': 'h'}
+    op, flags, long_flags = [], '', set()
+    skip = False
+    end = False
+    for arg in args:
+        if end:
+            continue
+        if skip:
+            skip = False
+            continue
+        if arg == '--':
+            end = True
+            continue
+        if arg.startswith('--'):
+            name = arg.split('=', 1)[0]
+            if name in operations:
+                op.append(operations[name])
+            else:
+                long_flags.add(name)
+            if name == '--color' and '=' not in arg:
+                skip = True
+        elif arg.startswith('-'):
+            flags += arg[1:]
+            op += [c for c in arg[1:] if c in 'SURQFTVhD']
+    if not args or 'h' in op or 'V' in op:
+        return 'Q', False, args
+    if len(op) != 1 or op[0] not in 'SURQFT':
+        raise ValueError('unsupported pacman operation for this installation')
+    operation = op[0]
+    if operation in 'QFT':
+        return operation, False, args
+    allowed_long = {'--refresh', '--sysupgrade', '--search', '--info', '--list',
+                    '--groups', '--print', '--downloadonly', '--clean', '--needed',
+                    '--noconfirm', '--confirm', '--verbose', '--debug', '--color',
+                    '--noprogressbar', '--disable-download-timeout', '--asdeps',
+                    '--asexplicit', '--quiet', '--recursive', '--cascade',
+                    '--nosave', '--unneeded'}
+    if long_flags - allowed_long or any(c not in 'SURyuqvislgpwcnh' for c in flags):
+        raise ValueError('unsupported pacman option; alternate roots, hook bypasses and dependency bypasses are refused')
+    refresh = 'y' in flags or '--refresh' in long_flags
+    full = 'u' in flags or '--sysupgrade' in long_flags
+    if refresh and not full:
+        raise ValueError('use pacman -Syu; refreshing without a full upgrade risks a partial upgrade')
+    readonly = operation == 'S' and (bool(set(flags) & set('silgpwc')) or bool(long_flags & {
+        '--search', '--info', '--list', '--groups', '--print', '--downloadonly', '--clean'}))
+    return operation, not readonly, args
+
+
+def full_upgrade(args):
+    for arg in args:
+        if arg == '--':
+            break
+        if arg == '--sysupgrade' or (arg.startswith('-') and not arg.startswith('--') and 'u' in arg[1:]):
+            return True
+    return False
+
+
+def plan_arguments(args):
+    # Pacman has already refreshed/resolved/downloaded its transaction when
+    # PreTransaction runs. Query that same database without refreshing again.
+    result = []
+    end = False
+    for arg in args:
+        if arg == '--':
+            end = True
+        if not end and arg == '--refresh':
+            continue
+        if not end and arg.startswith('-') and not arg.startswith('--'):
+            arg = '-' + arg[1:].replace('y', '')
+            if arg == '-':
+                continue
+        result.append(arg)
+    separator = result.index('--') if '--' in result else len(result)
+    result[separator:separator] = ['--print', '--print-format', '%n\t%v\t%l']
+    return result
+
+
+def review_transaction_kernel(args):
+    # Pacman calls PreTransaction after downloading and authenticating packages,
+    # before changing installed packages. Resolve against the now-locked DB.
+    planned = output(PACMAN, *plan_arguments(args))
+    kernels = [line.split('\t') for line in planned.splitlines()
+               if line.startswith('linux\t')]
+    if len(kernels) != 1 or len(kernels[0]) != 3:
+        raise ValueError('cannot identify the exact kernel transaction')
+    _, version, location = kernels[0]
+    from kernel_reviews import for_version
+    release, evidence = for_version(version, refresh=True)
+    parts = urllib.parse.urlsplit(location)
+    if parts.scheme in ('https', 'http', 'ftp'):
+        name = Path(urllib.parse.unquote(parts.path)).name
+        directories = output('/usr/bin/pacman-conf', 'CacheDir').splitlines()
+        candidates = [Path(directory) / name for directory in directories]
+    elif parts.scheme == 'file':
+        candidates = [Path(urllib.parse.unquote(parts.path))]
+    elif not parts.scheme:
+        candidates = [Path(location)]
+    else:
+        raise ValueError('unsupported kernel package location')
+    package = next((p for p in candidates if p.is_file()), None)
+    if package is None:
+        raise ValueError('authenticated kernel archive is unavailable for inspection')
+    if output(PACMAN, '-Qp', package).split() != ['linux', version]:
+        raise ValueError('kernel archive identity differs from transaction')
+    # Read archive contents to stdout only; never unpack into the live root.
+    members = output('/usr/bin/bsdtar', '-tf', package).splitlines()
+    kernels = [m for m in members if re.fullmatch(r'(?:\./)?usr/lib/modules/[^/]+/vmlinuz', m)]
+    if len(kernels) != 1 or kernels[0].removeprefix('./') != 'usr/lib/modules/' + release + '/vmlinuz':
+        raise ValueError('kernel archive release differs from review')
+    import hashlib
+    payload = subprocess.check_output(['/usr/bin/bsdtar', '-xOf', str(package), kernels[0]])
+    if hashlib.sha256(payload).hexdigest() != evidence['vmlinuz_sha256']:
+        raise ValueError('kernel archive hash differs from review; transaction refused')
+    atomic_json(REVIEW, {'release': release, 'evidence': evidence})
+
+
+def maintenance_status():
+    print(json.dumps(read_json(STATE) if STATE.exists() else {'state': 'initial'}, indent=2))
+
+
+def transaction(args, repair=False):
     check_environment()
-    from apps import registry
-    declared = {package for app in registry().values() for package in app.get('packages', [])}
-    if any(package not in declared for package in args.install):
-        raise ValueError('installation target is not declared by an application contract')
-    if args.integration_package:
-        package = args.integration_package.resolve(strict=True)
-        name, version = output('pacman', '-Qp', package).split()
-        installed_name, installed_version = output('pacman', '-Q', 'frarchenstein-wrt-arch').split()
-        if name != installed_name or int(output('vercmp', version, installed_version)) < 0:
-            raise ValueError('expected a same/newer signed frarchenstein integration package')
     with (RUN / 'update.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         state = read_json(STATE) if STATE.exists() else {'state': 'initial'}
-        if args.action == 'update' and state['state'] not in ['ready', 'initial']:
-            raise ValueError('previous transaction needs explicit repair')
-        if args.action == 'update' and state.get('kernel_release', os.uname().release) != os.uname().release:
-            raise ValueError('boot the published kernel before another update')
+        if not repair and state['state'] not in ['ready', 'initial']:
+            raise ValueError('previous transaction needs pacman --frarchenstein-repair')
+        if not repair and state.get('kernel_release', os.uname().release) != os.uname().release:
+            raise ValueError('boot the published kernel before another transaction')
         if shutil.disk_usage('/').free < 1024**3 or shutil.disk_usage('/boot').free < 256 * 1024**2:
             raise ValueError('insufficient staging/module preservation headroom')
         atomic_json(RUN / 'update-owner.json', {'pid': os.getpid(),
-            'starttime': Path('/proc/self/stat').read_text().split(') ', 1)[1].split()[19]})
+            'starttime': Path('/proc/self/stat').read_text().split(') ', 1)[1].split()[19],
+            'pacman_args': args})
+        REVIEW.unlink(missing_ok=True)
+        # Delay all state/application changes until the pre-hook has approved
+        # the candidate. Cancellation/refusal leaves the prior state untouched.
+        previous = STATE.read_bytes() if STATE.exists() else None
         try:
-            from apps import quiesce
-            quiesce()
-            preserve_running()
-            journal('prepared', running_kernel=os.uname().release, generation=audit_generation())
-            # Always a full supported upgrade. Reinstall requests participate in
-            # that same transaction. Local integration follows the full upgrade
-            # and must carry a trusted pacman signature (Required in the image).
-            call('pacman', '-Syu', '--noconfirm', *args.reinstall, *args.install)
-            if args.integration_package:
-                call('pacman', '-U', '--noconfirm', args.integration_package.resolve(strict=True))
-            # Run the installed lifecycle code after package replacement.
+            if not repair:
+                result = subprocess.run([PACMAN, *args])
+                changed = (STATE.read_bytes() if STATE.exists() else None) != previous
+                if result.returncode:
+                    if not changed:
+                        return result.returncode
+                    raise RuntimeError('pacman failed after transaction preparation')
+                if not changed:
+                    return 0  # Nothing to do, or the user declined.
+            else:
+                # Repair finalizes installed packages; it never starts another
+                # upgrade implicitly. Fix the reported cause before retrying.
+                from apps import quiesce
+                quiesce()
+                preserve_running()
+                journal('packages-installed')
             call('/usr/bin/python3', LIB / 'apps.py', 'refresh')
             prepare()
             call('/usr/bin/python3', LIB / 'apps.py', 'resume')
+            print('Arch transaction ready. Reboot when convenient; no automatic reboot.')
+            return 0
         except BaseException as error:
-            # Keep applications stopped if validation/restart failed.
-            if Path('/etc/frarchenstein/apps.json').exists():
-                subprocess.run(['/usr/bin/python3', str(LIB / 'apps.py'), 'quiesce'])
-            journal('repair-required', error=str(error))
+            changed = (STATE.read_bytes() if STATE.exists() else None) != previous
+            if changed or repair:
+                if Path('/etc/frarchenstein/apps.json').exists():
+                    subprocess.run(['/usr/bin/python3', str(LIB / 'apps.py'), 'quiesce'])
+                journal('repair-required', error=str(error))
             raise
         finally:
             (RUN / 'update-owner.json').unlink(missing_ok=True)
+            REVIEW.unlink(missing_ok=True)
+
+
+def pacman_main(args):
+    if args == ['--frarchenstein-status']:
+        maintenance_status()
+        return 0
+    if args == ['--frarchenstein-repair']:
+        return transaction([], repair=True)
+    _, mutate, _ = pacman_request(args)
+    if not mutate:
+        return subprocess.call([PACMAN, *args])
+    return transaction(args)
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == 'pacman':
+        return pacman_main(sys.argv[2:])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', choices=['pre', 'post'])
+    args = parser.parse_args()
+    (hook_pre if args.action == 'pre' else hook_post)()
+    return 0
 
 
 if __name__ == '__main__':
     try:
-        main()
+        sys.exit(main())
     except Exception as error:
-        print('router-arch-update: ' + str(error), file=sys.stderr)
+        print('frarchenstein pacman: ' + str(error), file=sys.stderr)
         sys.exit(1)

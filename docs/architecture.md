@@ -45,7 +45,7 @@ silently reformats data or substitutes a temporary root.
 From the root OpenWrt console, enter the prepared Arch userspace using:
 
 ```sh
-/usr/libexec/frarchenstein/arch-run /bin/bash
+arch
 ```
 
 This is an actual chroot sharing the running kernel, network and prepared API
@@ -58,8 +58,9 @@ OpenWrt module entrypoints support `modprobe [-a] [-q] [-v] NAME [OPTIONS]`,
 Unsupported options are refused. Names and aliases resolve against the running
 Arch kernel and the reviewed module policy.
 
-Use `router-arch-update --help` and `router-openwrt-update --help` inside Arch
-for the reviewed maintenance entrypoints. Full Arch transactions stage and
+Use `pacman` and `router-openwrt-update --help` inside Arch for maintenance. See
+[maintenance](maintenance.md) for the guarded transaction workflow and
+configurable HTTPS kernel-review downloads. Full Arch transactions stage and
 validate kernel/initramfs publication; failure requires explicit repair. Running
 modules remain available until reboot. There are no Arch/kernel rollback slots.
 New kernel contracts require an updated module-policy review.

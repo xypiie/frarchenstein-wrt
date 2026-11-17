@@ -4,6 +4,8 @@ builder/install.py
 builder/job.sh
 builder/lab-client.sh
 builder/reuse.py
+builder/review_kernel.py
+configs/kernel-reviews.json
 configs/network-defaults.sh
 configs/reviewed-kernels.json
 configs/source-provenance.json
@@ -19,14 +21,17 @@ recipes/arch/mkinitcpio/preset
 recipes/openwrt/build.sh
 recipes/openwrt/prepare_core.py
 src/apps.py
+src/arch
 src/arch-run.c
 src/frarchenstein-apps.init
 src/generations.py
 src/guard-update
+src/kernel_reviews.py
 src/kmod-entry.c
 src/module-bridge
 src/module_bridge.py
 src/mount-root
+src/pacman
 src/publish_boot.py
 src/runtime.py
 src/shutdown-arch
