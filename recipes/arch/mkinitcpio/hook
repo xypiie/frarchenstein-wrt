@@ -1,0 +1,9 @@
+#!/usr/bin/ash
+# SPDX-License-Identifier: GPL-2.0-only
+run_hook() { mount_handler=frarchenstein_mount; }
+frarchenstein_mount() {
+    if ! /usr/bin/python3 /usr/lib/frarchenstein/runtime.py early "$1"; then
+        echo 'frarchenstein: early root preparation failed; repair and reboot' >&2
+        while :; do /bin/sh -i; sleep 1; done
+    fi
+}

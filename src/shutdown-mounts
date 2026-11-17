@@ -1,0 +1,9 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+set -eu
+# procd's normal shutdown has stopped services before this STOP=90 script.
+sync
+/usr/libexec/frarchenstein/arch-run /usr/bin/bash /usr/lib/frarchenstein/shutdown-arch
+umount /run/frarchenstein/openwrt-etc
+# Final readonly remounts run after procd releases replaced executable mappings.
+sync

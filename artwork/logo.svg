@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
+ <title id="title">frarchenstein-wrt</title>
+ <desc id="desc">A friendly stitched router monster with a blue mountain crown, lime green face, and two network-port teeth.</desc>
+ <defs>
+  <linearGradient id="face" x2="0" y2="1"><stop stop-color="#c7f879"/><stop offset="1" stop-color="#80d65b"/></linearGradient>
+  <linearGradient id="arch" x2="1" y2="1"><stop stop-color="#37cbef"/><stop offset="1" stop-color="#1386c4"/></linearGradient>
+ </defs>
+ <rect width="1200" height="400" rx="32" fill="#101b29"/>
+ <g transform="translate(65 35)">
+  <path d="M39 188H14v45h25M249 188h25v45h-25" fill="#899bad" stroke="#101b29" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="35" y="108" width="218" height="187" rx="45" fill="url(#face)"/>
+  <path d="M36 128L143 3l110 125-66-19-44-54-40 54z" fill="url(#arch)"/>
+  <path d="M59 144h167M84 134v20m31-20v20m31-20v20m31-20v20m30-20v20" fill="none" stroke="#31554a" stroke-width="6" stroke-linecap="round"/>
+  <path d="M78 184l27 9m77 0 27-9" stroke="#173440" stroke-width="9" stroke-linecap="round"/>
+  <rect x="78" y="205" width="27" height="13" rx="6" fill="#173440"/>
+  <rect x="182" y="205" width="27" height="13" rx="6" fill="#173440"/>
+  <path d="M100 245q44 31 88 0" fill="none" stroke="#173440" stroke-width="9" stroke-linecap="round"/>
+  <g fill="#eef8f3"><path d="M120 253h16v18h-16zM151 253h16v18h-16z"/></g>
+  <path d="M114 310h59" stroke="#37cbef" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="144" cy="330" r="5" fill="#c7f879"/>
+ </g>
+ <text x="392" y="178" font-family="DejaVu Sans, sans-serif" font-size="54" font-weight="700" letter-spacing="-2" fill="#eef8f3">frarchenstein<tspan fill="#37cbef">-wrt</tspan></text>
+ <text x="396" y="225" font-family="DejaVu Sans, sans-serif" font-size="23" letter-spacing="2" fill="#a2b6c7">ARCH HEART. OPENWRT BRAIN.</text>
+ <path d="M397 258h255" stroke="#344657" stroke-width="2"/>
+ <circle cx="397" cy="258" r="4" fill="#9fe467"/>
+ <text x="396" y="293" font-family="DejaVu Sans, sans-serif" font-size="16" letter-spacing="3" fill="#a2b6c7">BUILD IT · BOOT IT · MAKE IT YOURS</text>
+</svg>

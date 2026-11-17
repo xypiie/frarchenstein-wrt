@@ -1,0 +1,25 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-only
+build() {
+    add_binary /usr/bin/python3
+    local pyroot library extensions
+    pyroot=$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))')
+    add_full_dir "$pyroot" '*.py'
+    # Import the boot helper without running its entrypoint. Include the actual
+    # extension closure, not optional GUI/database extensions unrelated to boot.
+    extensions=$(python3 -I - <<'PY'
+import runpy, sys
+runpy.run_path('/usr/lib/frarchenstein/runtime.py', run_name='frarchenstein_build_import')
+print('\n'.join(sorted({m.__file__ for m in sys.modules.values()
+                        if (getattr(m, '__file__', None) or '').endswith('.so')})))
+PY
+    ) || return 1
+    [[ -n $extensions ]] || return 1
+    while IFS= read -r library; do add_binary "$library" || return 1; done <<< "$extensions"
+    for binary in mount umount blkid losetup ip; do add_binary "/usr/bin/$binary"; done
+    add_file /usr/lib/frarchenstein/runtime.py
+    add_file /etc/frarchenstein/install.json
+    add_file /boot/frarchenstein-build/kernel-policy.json /etc/frarchenstein/kernel-policy.json
+    add_runscript
+}
+help() { echo 'Verified Arch-kernel/OpenWrt root handoff; OpenWrt preinit owns overlay.'; }

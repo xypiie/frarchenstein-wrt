@@ -1,0 +1,2 @@
+# Unified patches contain intentional context-only space lines.
+patches/*.patch -whitespace

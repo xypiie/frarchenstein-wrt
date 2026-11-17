@@ -1,0 +1,75 @@
+{
+  "description": "Origin hashes for adapted integration source components.",
+  "components": [
+    {
+      "source_component": "runtime.py",
+      "source_sha256": "3270e66bb4ea6cb1abb1f1f80b4d07a51794bddb6b7faf6ba8566e1fa9375b42",
+      "destination": "src/runtime.py"
+    },
+    {
+      "source_component": "module_bridge.py",
+      "source_sha256": "4d6cb999d57b2d4294b314022ad61867a29c22c9c4518d40d18b79e445d44c5f",
+      "destination": "src/module_bridge.py"
+    },
+    {
+      "source_component": "arch-run.c",
+      "source_sha256": "63c52ec6f1899c8ed7f0c0f49a283fb693a08c9dd6da8e743715c3c7db063af8",
+      "destination": "src/arch-run.c"
+    },
+    {
+      "source_component": "kmod-entry.c",
+      "source_sha256": "f29d201497bc0ec48db2061e17dcf3509c098d907b2999af41dd26b1d3963506",
+      "destination": "src/kmod-entry.c"
+    },
+    {
+      "source_component": "apps.py",
+      "source_sha256": "ed9c1ccb061629bfbbee7388bc34516f6144ba56859abe5b584f89f5f47b32ae",
+      "destination": "src/apps.py"
+    },
+    {
+      "source_component": "update.py",
+      "source_sha256": "e78720ba87eefc81b79a4f52d36f22c9ac335f88777fe3c39f2bdf7febcb7316",
+      "destination": "src/update.py"
+    },
+    {
+      "source_component": "generations.py",
+      "source_sha256": "47f9f7d14fd354548fa33198e8534136eb92eaa159f3040937fd4c6fb613cc0c",
+      "destination": "src/generations.py"
+    },
+    {
+      "source_component": "publish_boot.py",
+      "source_sha256": "096fe3679d358a961ea377f4f08804b9b068c012adf6f67f6a6e746c324e75aa",
+      "destination": "src/publish_boot.py"
+    },
+    {
+      "source_component": "guard-update",
+      "source_sha256": "3a08449906ae0417c1c59a6308cd2b967e0f998118e76dd44879703ee8d34144",
+      "destination": "src/guard-update"
+    },
+    {
+      "source_component": "mount-root",
+      "source_sha256": "62515f23325912e16e1f73ad3d771113c7e8a556ed9b4221da10a07a94d1a675",
+      "destination": "src/mount-root"
+    },
+    {
+      "source_component": "module-bridge",
+      "source_sha256": "778d301695c44fcceca7779e2eb50d868c90fd5416d1240abeaf8263acb142de",
+      "destination": "src/module-bridge"
+    },
+    {
+      "source_component": "shutdown-arch",
+      "source_sha256": "16e268666a97d88b8ba293f0c66ff5746c8be878e9f9c6fca97baa69ba1b40c2",
+      "destination": "src/shutdown-arch"
+    },
+    {
+      "source_component": "shutdown-mounts",
+      "source_sha256": "f49fc88bf2d2a0195b0e7231c84423655b8dd765d3a1432594b82ebcd4ac0603",
+      "destination": "src/shutdown-mounts"
+    },
+    {
+      "source_component": "application-service.init",
+      "source_sha256": "a10b7ff8bca669a7cb270d0e5e3214e46d84d6aaaad9c0316e1a6a115225117d",
+      "destination": "src/frarchenstein-apps.init"
+    }
+  ]
+}

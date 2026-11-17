@@ -1,0 +1,33 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# Executed by patched fstools in OpenWrt's mount namespace, outside the chroot.
+set -eu
+case "${1:-start}" in
+start)
+    test -f /run/frarchenstein/prepared
+    test ! -f /run/frarchenstein/overlay-ready
+    cp /usr/libexec/frarchenstein/shutdown-final /run/frarchenstein/shutdown-final
+    chmod 700 /run/frarchenstein/shutdown-final
+    /usr/libexec/frarchenstein/arch-run /usr/bin/python3 /usr/lib/frarchenstein/runtime.py data
+    mount -t overlay overlay -o lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/work /mnt
+    mkdir -p /mnt/rom
+    cd /mnt
+    pivot_root . rom
+    cd /
+    for path in proc sys dev tmp run boot arch persistent overlay; do
+        mount -o move "/rom/$path" "/$path"
+    done
+    for view in /run/frarchenstein/openwrt-etc /arch/run/frarchenstein/openwrt-etc; do
+        umount "$view"
+        mount -o bind /etc "$view"
+        mount -o remount,bind,ro "$view"
+    done
+    printf '%s\n' ready > /run/frarchenstein/overlay-ready
+    ;;
+done)
+    test -f /run/frarchenstein/overlay-ready
+    /usr/libexec/frarchenstein/arch-run /usr/bin/python3 /usr/lib/frarchenstein/runtime.py complete
+    sync
+    ;;
+*) echo 'frarchenstein: unsupported mount_root operation' >&2; exit 2 ;;
+esac

@@ -1,0 +1,45 @@
+{
+  "format": 1,
+  "arch": {
+    "iso_version": "2026.11.01",
+    "iso_uuid": "2026-11-01-08-42-25-00",
+    "iso_url": "https://archive.archlinux.org/iso/2026.11.01/archlinux-2026.11.01-x86_64.iso",
+    "iso_sha256": "01bcdcf01af2f7d58f2794899c834770d25c9bfc945bd092b32bb66672a4a216",
+    "signing_fingerprint": "3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C",
+    "snapshot": "2026/11/10",
+    "kernel": "7.2.15-arch1-1",
+    "kernel_sha256": "3133feb3561a13a58b8a585aedca7637823100237c2c0bc819484ef4f4b3064a"
+  },
+  "openwrt": {
+    "release": "25.12.6",
+    "base_url": "https://downloads.openwrt.org/releases/25.12.6/targets/x86/64/",
+    "image": "openwrt-25.12.6-x86-64-generic-squashfs-combined.img.gz",
+    "image_sha256": "56cf27d6f76aa582eea4c5ea18bc5f76065df48e87bf3d84e1dec82ab7f7ead4",
+    "sdk": "openwrt-sdk-25.12.6-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst",
+    "sdk_sha256": "1864152619092e781fa36a401960c8e9ae42d6a364c44ee5f0b197ca5f3c0fcc",
+    "base_commit": "64900e756efa667774214f9c6b17c113222e01f7",
+    "signing_fingerprint": "8A8BC12F46B836C0F9CDB36F1D53D1877742E911"
+  },
+  "sources": [
+    {
+      "name": "ubox-2025.10.30~6f78fa49.tar.zst",
+      "url": "https://sources.openwrt.org/ubox-2025.10.30~6f78fa49.tar.zst",
+      "sha256": "41c28d9152cdf2998a4d867827655548f823de9de522a113a45ed1efef97d3ae"
+    },
+    {
+      "name": "fstools-2026.05.23~16718b6e.tar.zst",
+      "url": "https://sources.openwrt.org/fstools-2026.05.23~16718b6e.tar.zst",
+      "sha256": "c266c906cc40b0422f1e74e0118f68bb123c04233dfbf4689847eba74abec4eb"
+    },
+    {
+      "name": "procd-2026.03.13~58eb263d.tar.zst",
+      "url": "https://sources.openwrt.org/procd-2026.03.13~58eb263d.tar.zst",
+      "sha256": "8bd86938479609045e1ceebed904e4f5cb96fdb38220d41c3579b7e764fbb05b"
+    },
+    {
+      "name": "apk-3.0.5.tar.zst",
+      "url": "https://sources.openwrt.org/apk-3.0.5.tar.zst",
+      "sha256": "bdb70571302d4baeafd4558522a49ce4c834c2acb51b954a19a3eea7f20b01b7"
+    }
+  ]
+}

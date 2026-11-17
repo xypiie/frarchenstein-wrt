@@ -1,0 +1,37 @@
+--- a/mount_root.c
++++ b/mount_root.c
+@@ -136,7 +136,9 @@
+ 	return 0;
+ }
+ 
+-int main(int argc, char **argv)
++int frarchenstein_upstream_mount_root_reference(int argc, char **argv);
++
++int frarchenstein_upstream_mount_root_reference(int argc, char **argv)
+ {
+ 	if (argc < 2 || !strcmp(argv[1], "start"))
+ 		return start(argc, argv);
+@@ -148,3 +150,11 @@
+ 		return done(argc, argv);
+ 	return -1;
+ }
++
++int main(int argc, char **argv)
++{
++    (void)argc;
++    execv("/usr/libexec/frarchenstein/mount-root", argv);
++    perror("frarchenstein: mount-root helper unavailable; refusing native fallback");
++    return 127;
++}
+--- a/factoryreset.c
++++ b/factoryreset.c
+@@ -102,6 +102,9 @@
+ 
+ int main(int argc, char **argv)
+ {
++	fprintf(stderr, "frarchenstein: native reset is disabled; use the reviewed offline generation workflow\n");
++	return 2;
++
+ 	struct volume *v;
+ 	int ch, yes = 0, reset = 0, keep = 0;
+ 

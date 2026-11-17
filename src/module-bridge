@@ -1,0 +1,3 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+exec /usr/libexec/frarchenstein/arch-run /usr/bin/python3 /usr/lib/frarchenstein/module_bridge.py "$@"

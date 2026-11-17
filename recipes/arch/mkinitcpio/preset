@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0-only
+ALL_config="/etc/mkinitcpio-frarchenstein.conf"
+ALL_kver="/boot/frarchenstein-build/vmlinuz-linux"
+PRESETS=('default')
+default_image="/boot/frarchenstein-build/initramfs-linux.img"
+default_options="--nopost"
