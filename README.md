@@ -1,3 +1,9 @@
+# frarchenstein-wrt
+
+OpenWrt routing and LuCI on an independently updatable Arch Linux kernel.
+Stock OpenWrt requires a full firmware upgrade to update its kernel. Here,
+OpenWrt userland and the Arch kernel have separate, guarded update paths.
+
 <p align="center"><img src="artwork/logo.svg" alt="frarchenstein-wrt" width="900"></p>
 
 Happily vibe coded with [OpenAI Codex](https://openai.com/codex/).
@@ -15,6 +21,63 @@ The Linux kernel comes from Arch. OpenWrt owns PID 1, networking, firewall,
 DHCP/DNS, LuCI and its writable overlay. Arch is mounted at `/arch`; it does not
 run a second systemd instance. [Architecture and recipes](docs/architecture.md)
 explains the boundaries and update protections.
+
+### Update OpenWrt on the live system
+
+From the OpenWrt root shell, update ordinary userland packages:
+
+```sh
+apk update
+apk upgrade
+```
+
+Changes persist in the active overlay. Patched core packages stay pinned to
+compatible builds; upgrading them requires refreshed integration packages.
+
+For a complete userland switch, use a compatible, reviewed hybrid SquashFS.
+Inside `arch`, prepare it and select the generation ID printed by `prepare`:
+
+```sh
+arch
+router-openwrt-update prepare \
+  --rootfs /path/to/reviewed/rootfs.squashfs --sha256 EXPECTED_SHA256 \
+  --copy etc/config/network --copy etc/config/system \
+  --copy etc/config/firewall --copy etc/config/dhcp
+router-openwrt-update select GENERATION_ID
+exit
+```
+
+After successful selection, run `reboot` from OpenWrt. Only the listed UCI files
+are copied; each generation has its own overlay. Select the previous generation
+ID to roll back. Stock `sysupgrade` is disabled; a new OpenWrt release needs
+reviewed integration first. See [architecture](docs/architecture.md).
+
+### Update the kernel on the live system
+
+From the OpenWrt root shell, enter Arch and run a full system upgrade:
+
+```sh
+arch
+pacman -Syu
+pacman --frarchenstein-status
+```
+
+This updates Arch packages, including an approved kernel, and regenerates the
+boot files. An unreviewed kernel blocks the entire transaction before installed
+packages change. Review downloads fall back to bundled/cached information when
+offline; the GitHub URL is not yet configured by default.
+
+Once the update succeeds and status is `ready`, return to OpenWrt and reboot:
+
+```sh
+exit
+reboot
+```
+
+If status is `repair-required`, resolve the cause and run
+`pacman --frarchenstein-repair` inside Arch before rebooting. OpenWrt's selected
+userland and overlay remain in place. See [maintenance](docs/maintenance.md)
+for configuration and recovery details.
 
 ### Build a disposable installation first
 
@@ -121,18 +184,6 @@ Before actual router hardware use, provide the real NIC MAC mapping using
 driver/firmware coverage and physical port roles separately. The default mapping
 belongs to the QEMU lab. Wi-Fi and physical-router acceptance are separate
 gates.
-
-### Maintain the Arch side
-
-From the OpenWrt root console, run `arch` to open the maintenance Bash shell.
-Inside it, use `pacman -Syu` for a full upgrade and `pacman -S PACKAGE` for
-package installation. The integration checks the candidate kernel before any
-installed package changes, preserves running modules and regenerates boot files.
-An unreviewed kernel refuses the whole transaction.
-
-[Maintenance and kernel reviews](docs/maintenance.md) describes status/repair
-commands and optional HTTPS review downloads. The download endpoint is
-not yet configured; bundled reviews remain usable when GitHub is unavailable.
 
 ### Validate a new Arch kernel
 
