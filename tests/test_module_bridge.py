@@ -25,13 +25,17 @@ class ModuleMapping(unittest.TestCase):
                 self.assertEqual(execute.call_args.args[0][-2:], ['--', new])
 
     def test_probe_uses_a_real_kmod_entrypoint(self):
-        # Exercise argument dispatch in real kmod, without loading any module.
-        if not shutil.which('modprobe'):
-            self.skipTest('kmod is not available')
         with patch.object(bridge.subprocess, 'run', return_value=types.SimpleNamespace(returncode=0)) as execute:
             bridge.probe('dummy', [], Path('/run/fixture'), self.policy, set())
             executable = execute.call_args.args[0][0]
-        result = subprocess.run([executable, '--version'], capture_output=True, text=True)
+        self.assertEqual(executable, '/usr/bin/modprobe')
+        # The bridge runs inside Arch; test hosts may keep kmod in /usr/sbin.
+        # Preserve the named entrypoint: resolving its symlink to kmod changes
+        # argv[0] dispatch. --version exercises it without loading any module.
+        host_executable = shutil.which(Path(executable).name)
+        if not host_executable:
+            self.skipTest('kmod is not available')
+        result = subprocess.run([host_executable, '--version'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('kmod', result.stdout)
 
