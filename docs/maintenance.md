@@ -72,19 +72,19 @@ administrator-configured repository URL. It does not need a separate signature,
 signing key or publication envelope. Official Arch/OpenWrt package and release
 signature verification remains mandatory.
 
-The repository address has not been chosen, so the download URL defaults to
-`null`. Bundled reviews remain available in
-`/usr/share/frarchenstein/reviewed-kernels.json`. Once the repository exists,
-configure `/etc/frarchenstein/kernel-reviews.json`:
+New installations fetch the tracked review file from the project's `main`
+branch. On an existing installation, set the following inside the Arch chroot
+in `/etc/frarchenstein/kernel-reviews.json` to enable the same source:
 
 ```json
 {
-  "url": "https://raw.githubusercontent.com/OWNER/REPO/main/configs/reviewed-kernels.json"
+  "url": "https://raw.githubusercontent.com/xypiie/frarchenstein-wrt/main/configs/reviewed-kernels.json"
 }
 ```
 
-Use your own repository and branch in place of these placeholders. This URL
-points directly to the tracked file; a normal Git push publishes new entries.
+A normal Git push publishes new review entries. Set `url` to `null` to use
+only bundled reviews, or configure another trusted HTTPS repository. Bundled
+reviews are installed at `/usr/share/frarchenstein/reviewed-kernels.json`.
 HTTPS certificate verification is enabled and redirects must remain HTTPS.
 Downloaded records must match the integration ABI and review schema before the
 cache is replaced atomically. Changing the configured repository URL prevents

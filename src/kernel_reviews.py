@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0-only
-"""Kernel reviews trusted through configured HTTPS; no default repository."""
+"""Kernel reviews trusted through the configured HTTPS repository."""
 import json
 from pathlib import Path
 import re

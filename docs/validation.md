@@ -84,8 +84,9 @@ with authentication and offline behavior covered by the tests above.
 
 Arch integration 1.0-15 trusts review downloads through the configured
 repository's HTTPS endpoint. Detached review signatures are no longer required;
-distribution package and release signatures remain mandatory. The GitHub URL is
-still unset. All 68 public unit tests and four local publication checks pass.
+distribution package and release signatures remain mandatory. The GitHub URL was
+unset during this trial; repository configuration followed later. All 68 public
+unit tests and four local publication checks pass.
 
 The new `review-kernel.sh` completed a real full Arch upgrade from kernel
 7.2.15-arch1-1 to 7.3.4-arch1-2 in a fresh generic QEMU installation. It
@@ -110,3 +111,12 @@ virtio networking; physical hardware is not certified. Generation B uses a
 fixture of the same OpenWrt release. Application lifecycle, arbitrary OpenWrt
 release migration, IPv6 routing, Wi-Fi, physical hardware and private restore
 remain separate gates. All project VMs are stopped.
+
+## GitHub review endpoint
+
+Arch integration 1.0-16 configures the default review URL to the tracked
+`configs/reviewed-kernels.json` on `xypiie/frarchenstein-wrt`'s `main` branch.
+A live fetch through the installed fetcher code passed HTTPS and schema checks
+and returned reviews for 7.2.14-arch1-1, 7.2.15-arch1-1 and 7.3.4-arch1-2.
+All 68 source tests and the local publication audit passed. This configuration
+change did not require another QEMU kernel-validation run.

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 pkgname=frarchenstein-wrt-arch
 pkgver=1.0
-pkgrel=15
+pkgrel=16
 pkgdesc='Arch kernel and maintenance integration for the frarchenstein hybrid prototype'
 arch=('x86_64')
 license=('GPL-2.0-only')

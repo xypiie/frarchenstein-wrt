@@ -65,7 +65,7 @@ pacman --frarchenstein-status
 This updates Arch packages, including an approved kernel, and regenerates the
 boot files. An unreviewed kernel blocks the entire transaction before installed
 packages change. Review downloads fall back to bundled/cached information when
-offline; the GitHub URL is not yet configured by default.
+offline. New installations fetch reviews from this project's GitHub repository.
 
 Once the update succeeds and status is `ready`, return to OpenWrt and reboot:
 
